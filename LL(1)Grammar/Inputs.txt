@@ -1,0 +1,15 @@
+﻿terminal symbols:
++ * i ( ) $ l
+nonterminal symbols:
+E A T B F
+start symbol:
+E
+productions:
+E TA
+A +TA
+A l
+T FB
+B *FB
+B l
+F i
+F (E)
