@@ -10,6 +10,7 @@ namespace LL_1_Grammar
         public static Dictionary<string, Dictionary<string, Production>> Table;
         public static Dictionary<string, string> First;
         public static Dictionary<string, string> Follow;
+        public static List<Production> productionsList;
         public static List<string> Nonterminals;
         public static List<string> Terminals;
         public static string StartSymbol;
@@ -71,6 +72,9 @@ namespace LL_1_Grammar
                 }
             }
 
+
+
+
             Follow = new Dictionary<string, string>();
 
             FindFollowSets();
@@ -87,9 +91,9 @@ namespace LL_1_Grammar
             Console.ReadKey();
         }
 
-        private static void FindFollowSets()
+        public static void FindFollowSets()
         {
-            List<Production> productionsList = new List<Production>();
+            productionsList = new List<Production>();
             foreach (var prod in Productions)
             {
                 var production = prod.Value;
@@ -119,51 +123,73 @@ namespace LL_1_Grammar
             }
             Follow[StartSymbol] = "$";
 
-            foreach (var production in productionsList)
+            int r = 0;
+            while (r < 3)
             {
-                for (int i = 0; i < production.GoesToRule.Length; i++)
+                foreach (var production in productionsList)
                 {
-                    string symbol = production.GoesToRule[i].ToString();
-                    if (Nonterminals.Contains(symbol))
+                    for (int i = 0; i < production.GoesToRule.Length; i++)
                     {
-                        string nextSymbol = (i < production.GoesToRule.Length - 1) ?
-                                            production.GoesToRule[i + 1].ToString() :
-                                            Lambda;
+                        string symbol = production.GoesToRule[i].ToString();
+                        if (Nonterminals.Contains(symbol))
+                        {
+                            string nextSymbol = (i < production.GoesToRule.Length - 1) ?
+                                                production.GoesToRule[i + 1].ToString() :
+                                                Lambda;
 
-                        if (nextSymbol.Equals(Lambda))
-                        {
-                            Follow[symbol] += Follow[production.Nonterminal];
-                        }
-                        else
-                        {
-                            string M;
-                            if (Terminals.Contains(nextSymbol))
-                                M = nextSymbol;
-                            else
-                                M = First[nextSymbol];
-                            if (M.Contains(Lambda))
+                            if (nextSymbol.Equals(Lambda))
                             {
-                                string str = String.Empty;
-                                foreach (var c in M)
+                                var beforeAdd = Follow[symbol];
+                                Follow[symbol] = Reunion(beforeAdd, Follow[production.Nonterminal]);
+
+                            }
+                            else
+                            {
+                                string M;
+                                if (Terminals.Contains(nextSymbol))
+                                    M = nextSymbol;
+                                else
+                                    M = First[nextSymbol];
+                                if (M.Contains(Lambda))
                                 {
-                                    if (c != 'l')
-                                        str += c;
+                                    string str = String.Empty;
+                                    foreach (var c in M)
+                                    {
+                                        if (c != 'l')
+                                            str += c;
+                                    }
+                                    Follow[symbol] = Reunion(Follow[symbol], Reunion(str, Follow[production.Nonterminal]));
                                 }
-                                Follow[symbol] += str + Follow[production.Nonterminal];
-                            }
-                            else
-                            {
-                                Follow[symbol] += M;
-                            }
+                                else
+                                {
+                                    Follow[symbol] = Reunion(Follow[symbol], M);
+                                }
 
+                            }
                         }
                     }
                 }
+                r++;
             }
 
 
 
 
+
+        }
+
+
+        public static string Reunion(string beforeAdd, string addString)
+        {
+
+            foreach (var c in addString)
+            {
+                if (!beforeAdd.Contains(c))
+                {
+                    beforeAdd += c;
+                }
+            }
+            return beforeAdd;
         }
 
         private static void CompleteTable()
@@ -174,23 +200,36 @@ namespace LL_1_Grammar
                 string symbol = currentProduction.GoesToRule[0].ToString();
                 if (Terminals.Contains(symbol) && !symbol.Equals(Lambda))
                 {
-                    Table[symbol][currentProduction.Nonterminal] = currentProduction;
+                    AddProductionAndCheckLLOne(symbol, currentProduction.Nonterminal, currentProduction);
                 }
                 else
                 {
                     if (Nonterminals.Contains(symbol))
                     {
                         foreach (var ch in First[symbol])
-                            Table[ch.ToString()][currentProduction.Nonterminal] = currentProduction;
+                            AddProductionAndCheckLLOne(ch.ToString(), currentProduction.Nonterminal, currentProduction);
+
                     }
                     else
                     {
-                        foreach (var ch in Follow[symbol])
-                            Table[ch.ToString()][currentProduction.Nonterminal] = currentProduction;
+                        foreach (var ch in Follow[currentProduction.Nonterminal])
+                            AddProductionAndCheckLLOne(ch.ToString(), currentProduction.Nonterminal, currentProduction);
+
                     }
 
                 }
             }
+        }
+
+        private static void AddProductionAndCheckLLOne(string terminal, string nonterminal, Production producion)
+        {
+            if (Table[terminal][nonterminal] != null)
+            {
+                Console.WriteLine("The table has a cell with multiple entries, the grammer is not LL(1)");
+                throw new Exception("The table has a cell with multiple entries, the grammer is not LL(1)");
+            }
+
+            Table[terminal][nonterminal] = producion;
         }
 
         private static void FindFirstSets()
