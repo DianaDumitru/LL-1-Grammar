@@ -207,7 +207,8 @@ namespace LL_1_Grammar
                     if (Nonterminals.Contains(symbol))
                     {
                         foreach (var ch in First[symbol])
-                            AddProductionAndCheckLLOne(ch.ToString(), currentProduction.Nonterminal, currentProduction);
+                            if (!ch.Equals(Lambda))
+                                AddProductionAndCheckLLOne(ch.ToString(), currentProduction.Nonterminal, currentProduction);
 
                     }
                     else
